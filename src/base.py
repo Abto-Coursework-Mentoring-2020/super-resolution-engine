@@ -45,7 +45,7 @@ class SRModel(ABC):
 
     def enhance(self, images: tf.Tensor) -> tf.Tensor:
         """
-        Runs images through the model to enchance them
+        Runs already prepared images through the model to enchance them.er n
 
         Args:
             images (tf.Tensor): [description]
@@ -56,8 +56,7 @@ class SRModel(ABC):
         if not self.is_loaded():
             raise ModelIsNotLoaded
         
-        for image in images:
-            yield self._model(self.preprocess_image(image))
+        return self._model(images)
     
     def __call__(self, images: tf.Tensor) -> tf.Tensor:
         return self.enhance(images)
