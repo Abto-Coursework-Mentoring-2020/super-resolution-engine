@@ -1,6 +1,5 @@
 import tensorflow as tf
 from abc import ABC, abstractproperty, abstractmethod, abstractstaticmethod, abstractstaticmethod
-from numpy import array
 
 from exceptions import ModelIsNotLoaded
 
