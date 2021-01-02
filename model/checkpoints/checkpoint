@@ -1,8 +1,8 @@
-model_checkpoint_path: "pix-att-net-ckpt-465"
-all_model_checkpoint_paths: "pix-att-net-ckpt-463"
-all_model_checkpoint_paths: "pix-att-net-ckpt-464"
-all_model_checkpoint_paths: "pix-att-net-ckpt-465"
-all_model_checkpoint_timestamps: 1609493690.5667558
-all_model_checkpoint_timestamps: 1609494211.1481814
-all_model_checkpoint_timestamps: 1609494742.3764393
-last_preserved_timestamp: 1609263379.5385444
+model_checkpoint_path: "pix-att-net-ckpt-21"
+all_model_checkpoint_paths: "pix-att-net-ckpt-19"
+all_model_checkpoint_paths: "pix-att-net-ckpt-20"
+all_model_checkpoint_paths: "pix-att-net-ckpt-21"
+all_model_checkpoint_timestamps: 1609518334.2459497
+all_model_checkpoint_timestamps: 1609518625.1139126
+all_model_checkpoint_timestamps: 1609518834.841381
+last_preserved_timestamp: 1609515137.7340162

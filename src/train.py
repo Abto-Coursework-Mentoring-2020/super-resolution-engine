@@ -9,24 +9,27 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 
 from utils import plot_single_image, plot_multiple_images, logger
-from losses import l1_image_loss
+from losses import l1_image_loss, multiscale_ssim_loss
 from core.pan import PixelAttentionSRNetwork
 from data import LR_IMAGE_SIZE, HR_IMAGE_SIZE, CLEAR_IMAGES_DIR, get_dataset
 
 
-batch_size = 64
+batch_size = 32
 input_lr_shape = (None, *LR_IMAGE_SIZE, 3) # HxWxC
 input_hr_shape = (None, *HR_IMAGE_SIZE, 3) # HxWxC
-print_freq = 4
+print_freq = 50
 
 n_epochs = 15
 # learning_rate = float(tf.random.uniform((1,), 1e-7, 1e-3))
-learning_rate = 5e-4
+learning_rate = 5e-6
+alpha = tf.constant(0.84)
 
 cpu = '/CPU:0'
-gpu = '/GPU:0'
+gpu = tf.test.gpu_device_name()
 
-device = cpu
+device = gpu or cpu
+logger.info(f'Running on device {repr(device)}')
+
 
 max_ckpt_to_keep = 3
 checkpoint_dir = './model/checkpoints'
@@ -40,13 +43,13 @@ logger = logging.getLogger()
 def train_step(lr_batch_images, hr_batch_images):
     with tf.GradientTape() as tape:
         enhanced_images = sr_net(lr_batch_images, training=True)
-        loss = l1_image_loss(hr_batch_images, enhanced_images)
+        loss = alpha * multiscale_ssim_loss(hr_batch_images, enhanced_images) + (1 - alpha) * 0.1333 * l1_image_loss(hr_batch_images, enhanced_images)
     
     grads = tape.gradient(loss, sr_net.trainable_variables)
     optimizer.apply_gradients(zip(grads, sr_net.trainable_variables))
 
     return enhanced_images, float(loss)
-    
+
 
 def train():
     with tf.device(device):
@@ -60,10 +63,9 @@ def train():
                 losses.append(loss)
                 train_psnr = float(tf.reduce_mean(tf.image.psnr(hr_images, tf.clip_by_value(enhanced_imgs, 0, 255), 255)))
                 train_psnrs.append(train_psnr)
-
+                print(train_psnr)
                 if (i_batch + 1) % print_freq == 0:
-                    fig_file_path_tmpl = './.out/visualization/epoch_{i_epoch}_batch_{i_batch}_{data_clf}_results.png'
-                    # fig_file_path_tmpl = './visualization/epoch_{i_epoch}_batch_{i_batch}_{data_clf}_results.png'
+                    fig_file_path_tmpl = './out/visualization/epoch_{i_epoch}_batch_{i_batch}_{data_clf}_results.png'
                     fig_title_tmpl = 'Epoch {i_epoch}. Batch {i_batch}. {data_clf_label} PSNR: {psnr}'
                     try:
                         plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, i_batch=i_batch, data_clf_label='Train', psnr=train_psnr), figsize=(8, 8))
@@ -91,6 +93,7 @@ def train():
                         ))  
                         
                         ckpt_manager.save()
+                        print('Saved model')
                     except Exception as ex:
                         print(f"Couldn't eval losses/metrics on images {lr_images.shape} {hr_images.shape}")
                         print(ex)

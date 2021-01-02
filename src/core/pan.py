@@ -1,18 +1,18 @@
 import tensorflow as tf
-from tensorflow.keras.layers import ZeroPadding2D, UpSampling2D, LeakyReLU, Conv2D
+from tensorflow.keras.layers import Layer, ZeroPadding2D, UpSampling2D, LeakyReLU, Conv2D
 from tensorflow.keras import Sequential, Model, Input
 
 
-class PA(Model):
+class PA(Layer):
     def __init__(self, n_filters, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.conv = Conv2D(n_filters, (1, 1), strides=(1, 1), activation='sigmoid')
     
-    def __call__(self, X, training=True):
-        return self.conv(X) * X
+    def __call__(self, inputs):
+        return self.conv(inputs) * inputs
         
 
-class SCPA(Model):
+class SCPA(Layer):
     def __init__(self, n_filters, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -32,25 +32,21 @@ class SCPA(Model):
         
         self.lrelu = LeakyReLU(0.2)
         self.one_padd = ZeroPadding2D(padding=1)
-        
-        
-    def __call__(self, X, training=True):
-        br_a_inputs = self.lrelu(self.inp_conv_br_a(X))
+    
+    def call(self, inputs, training=True):
+        br_a_inputs = self.lrelu(self.inp_conv_br_a(inputs))
         
         # PA-Conv
         br_a_outputs = self.lrelu(self.conv3_br_a(self.conv1_br_a(br_a_inputs) * self.conv2_br_a(br_a_inputs)))
         
-        br_b_inputs = self.lrelu(self.inp_conv_br_b(X))
+        br_b_inputs = self.lrelu(self.inp_conv_br_b(inputs))
         
         br_b_outputs = self.conv2_br_b(self.one_padd(br_b_inputs))
 
-        return self.outp_conv(tf.concat((br_a_outputs, br_b_outputs), axis=3)) + X
-    
-    def call(self, inputs, training=True):
-        return self(inputs, training=training)
+        return self.outp_conv(tf.concat((br_a_outputs, br_b_outputs), axis=3)) + inputs
 
 
-class UPA():
+class UPA(Layer):
     def __init__(self, n_filters, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
@@ -63,15 +59,12 @@ class UPA():
         self.lrelu = LeakyReLU(0.2)
         self.one_padd = ZeroPadding2D(padding=1)
         
-    def __call__(self, X, training=True):
-        outputs = self.upsampling(X)
+    def call(self, inputs, training=True):
+        outputs = self.upsampling(inputs)
         outputs = self.lrelu(self.one_padd(self.conv1(outputs)))
         outputs = self.lrelu(self.pix_att(outputs))
         outputs = self.lrelu(self.one_padd(self.conv2(outputs)))
         return self.lrelu(self.conv2(self.one_padd(outputs)))
-        
-    def call(self, inputs, training=True):
-        return self(inputs, training=training)
     
     
 class PixelAttentionSRNetwork(Model):
@@ -95,9 +88,9 @@ class PixelAttentionSRNetwork(Model):
         self.outp_conv = Conv2D(3, (3, 3), strides=(1, 1))
         
         self.one_padd = ZeroPadding2D(padding=1)
-    
-    def __call__(self, X, training=True):
-        outputs = self.inp_conv(self.one_padd(X))
+
+    def call(self, inputs, training=True):
+        outputs = self.inp_conv(self.one_padd(inputs))
         
         outputs += self.trunk_conv(self.one_padd(self.scpa_trunk(outputs)))
 
@@ -108,7 +101,5 @@ class PixelAttentionSRNetwork(Model):
             
         outputs = self.outp_conv(self.one_padd(outputs))
 
-        return outputs + tf.image.resize(X, tuple(dim * self.scale_factor for dim in X.shape[1:3]), method='bilinear')
+        return outputs + tf.image.resize(inputs, tuple(dim * self.scale_factor for dim in inputs.shape[1:3]), method='bilinear')
         
-    def call(self, inputs, training=True):
-        return self(inputs, training=training)

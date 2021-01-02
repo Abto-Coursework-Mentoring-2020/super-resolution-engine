@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import logging
 
 
-logging.basicConfig(filename='./.out/logs.log', format='%(asctime)-15s %(message)s', level=logging.INFO)
+logging.basicConfig(filename='./out/logs.log', format='%(asctime)-15s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
 
 def save_image(image, filename):
@@ -68,5 +68,3 @@ def plot_single_image(image, title="", cmap=None):
     plt.imshow(image, cmap=cmap)
     plt.axis("off")
     plt.title(title)
-    
-plot_multiple_images(tf.random.normal((2, 16, 32, 32, 3)) * 255, 'Gaussian noise')
