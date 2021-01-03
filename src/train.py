@@ -14,14 +14,14 @@ from core.pan import PixelAttentionSRNetwork
 from data import LR_IMAGE_SIZE, HR_IMAGE_SIZE, CLEAR_IMAGES_DIR, get_dataset
 
 
-batch_size = 32
+batch_size = 24
 input_lr_shape = (None, *LR_IMAGE_SIZE, 3) # HxWxC
 input_hr_shape = (None, *HR_IMAGE_SIZE, 3) # HxWxC
-print_freq = 50
+print_freq = 100
 
 n_epochs = 15
 # learning_rate = float(tf.random.uniform((1,), 1e-7, 1e-3))
-learning_rate = 5e-6
+learning_rate = 5e-7
 alpha = tf.constant(0.84)
 
 cpu = '/CPU:0'
@@ -107,7 +107,7 @@ def train():
             total_training_time += epoch_duration 
             logger.info(f'Run epoch #{i_epoch} in {epoch_duration} seconds')
 
-    with open(f'./.out/{int(datetime.now().timestamp())}_train_results.json', 'w') as fid:
+    with open(f'./out/{int(datetime.now().timestamp())}_train_results.json', 'w') as fid:
         dump(dict(
             batch_size=batch_size, 
             learning_rate=learning_rate, 
