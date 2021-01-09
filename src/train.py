@@ -3,7 +3,7 @@ import logging
 from os import path
 from itertools import cycle
 from datetime import datetime
-from json import dump
+from json import dump, dumps
 
 import tensorflow as tf
 from matplotlib import pyplot as plt
@@ -19,7 +19,7 @@ input_lr_shape = (None, *LR_IMAGE_SIZE, 3) # HxWxC
 input_hr_shape = (None, *HR_IMAGE_SIZE, 3) # HxWxC
 print_freq = 100
 
-n_epochs = 15
+n_epochs = 30
 # every 10 epochs (bs=24) decay current lr to lr_new = prev_lr * 0.1
 learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-5,
@@ -66,7 +66,7 @@ def train():
             tick = time.time()
             for lr_images, hr_images in train_dataset:
                 enhanced_imgs, loss = train_step(lr_images, hr_images)
-                losses.append(loss)
+                losses.append(float(loss))
                 train_psnr = float(tf.reduce_mean(tf.image.psnr(hr_images, tf.clip_by_value(enhanced_imgs, 0, 255), 255)))
                 train_psnrs.append(train_psnr)
                 print(train_psnr)
@@ -106,7 +106,7 @@ def train():
                     logger.info('Epoch {0}. Batch {1}. Loss: {2:.4f}. Train PSNR: {3:.4f}.'.format(
                         i_epoch, global_iter_count, loss, train_psnr
                     ))
-
+              
             tock = time.time()
             epoch_duration = round(tock - tick, 3)
             total_training_time += epoch_duration 
@@ -115,7 +115,7 @@ def train():
     with open(f'./out/{int(datetime.now().timestamp())}_train_results.json', 'w') as fid:
         dump(dict(
             batch_size=batch_size, 
-            optimizer_conf=optimizer.get_config(),
+            optimizer_conf={k:str(v) for k, v in optimizer.get_config().items()},
             device=device,
             n_epochs=n_epochs, 
             lr_image_size=LR_IMAGE_SIZE,
