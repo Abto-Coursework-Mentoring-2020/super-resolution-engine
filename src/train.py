@@ -21,13 +21,15 @@ print_freq = 100
 
 n_epochs = 30
 # every 10 epochs (bs=24) decay current lr to lr_new = prev_lr * 0.1
-learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
-    initial_learning_rate=1e-5,
-    decay_steps=3333,
-    decay_rate=.1,
-)
+# learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
+#     initial_learning_rate=1e-6,
+#     decay_steps=3333,
+#     decay_rate=.1,
+# )
+learning_rate = 1e-8
 
 alpha = tf.constant(0.84)
+global_iter_count = tf.Variable(0, name='tr_iter_count')
 
 cpu = '/CPU:0'
 gpu = tf.test.gpu_device_name()
@@ -47,21 +49,25 @@ logger = logging.getLogger()
 @tf.function
 def train_step(lr_batch_images, hr_batch_images):
     with tf.GradientTape() as tape:
+        # plot_multiple_images((lr_batch_images.numpy(), lr_batch_images.numpy()), 'lr_images', figsize=(8, 8))
+        # plt.savefig('test.png')
+        # return
         enhanced_images = sr_net(lr_batch_images, training=True)
-        loss = alpha * multiscale_ssim_loss(hr_batch_images, enhanced_images) + (1 - alpha) * 0.1333 * l1_image_loss(hr_batch_images, enhanced_images)
+        loss = alpha * multiscale_ssim_loss(hr_batch_images, enhanced_images) + (1 - alpha) * l1_image_loss(hr_batch_images, enhanced_images)
     
     grads = tape.gradient(loss, sr_net.trainable_variables)
     optimizer.apply_gradients(zip(grads, sr_net.trainable_variables))
 
-    return enhanced_images, float(loss)
+    return enhanced_images, loss
 
 
 def train():
+    global global_iter_count
     with tf.device(device):
+        prev_iter_count = int(global_iter_count)
         losses = []
         train_psnrs, val_psnrs, test_psnrs = [], [], []
         total_training_time = 0.0
-        global_iter_count = 0
         for i_epoch in range(n_epochs):       
             tick = time.time()
             for lr_images, hr_images in train_dataset:
@@ -70,33 +76,33 @@ def train():
                 train_psnr = float(tf.reduce_mean(tf.image.psnr(hr_images, tf.clip_by_value(enhanced_imgs, 0, 255), 255)))
                 train_psnrs.append(train_psnr)
                 print(train_psnr)
-                global_iter_count += 1
+                global_iter_count.assign_add(1)
                 if global_iter_count % print_freq == 0:
                     fig_file_path_tmpl = './out/visualization/epoch_{i_epoch}_iter_{iter_cnt}_{data_clf}_results.png'
                     fig_title_tmpl = 'Epoch {i_epoch}. Iteration {iter_cnt}. {data_clf_label} PSNR: {psnr}'
                     
-                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf_label='Train', psnr=train_psnr), figsize=(8, 8))
-                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf='train'))
+                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf_label='Train', psnr=train_psnr), figsize=(8, 8))
+                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf='train'))
                     plt.close()
 
                     lr_images, hr_images = next(val_dataset)
                     enhanced_imgs = tf.clip_by_value(sr_net(lr_images, training=False), 0, 255)
                     val_psnr = float(tf.reduce_mean(tf.image.psnr(hr_images, enhanced_imgs, 255)))
-                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf_label='Validation', psnr=val_psnr), figsize=(8, 8))
-                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf='val'))
+                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf_label='Validation', psnr=val_psnr), figsize=(8, 8))
+                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf='val'))
                     plt.close()
                     val_psnrs.append(val_psnr)
 
                     lr_images, hr_images = next(test_dataset)
                     enhanced_imgs = tf.clip_by_value(sr_net(lr_images, training=False), 0, 255)
                     test_psnr = float(tf.reduce_mean(tf.image.psnr(hr_images, enhanced_imgs, 255)))
-                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf_label='Test', psnr=test_psnr), figsize=(8, 8))
-                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=global_iter_count, data_clf='test'))
+                    plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf_label='Test', psnr=test_psnr), figsize=(8, 8))
+                    plt.savefig(fig_file_path_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf='test'))
                     plt.close()
                     test_psnrs.append(test_psnr)
 
                     logger.info('Epoch {0}. Iteration {1}. Loss: {2:.4f}. Train PSNR: {3:.4f}. Val PSNR: {4:.4f}. Test PSNR: {5:.4f}.'.format(
-                        i_epoch, global_iter_count, loss, float(train_psnr), float(val_psnr), float(test_psnr)
+                        i_epoch, int(global_iter_count), loss, float(train_psnr), float(val_psnr), float(test_psnr)
                     ))  
                     
                     ckpt_manager.save()
@@ -104,7 +110,7 @@ def train():
                     
                 else:
                     logger.info('Epoch {0}. Batch {1}. Loss: {2:.4f}. Train PSNR: {3:.4f}.'.format(
-                        i_epoch, global_iter_count, loss, train_psnr
+                        i_epoch, int(global_iter_count), loss, train_psnr
                     ))
               
             tock = time.time()
@@ -125,6 +131,7 @@ def train():
             train_psnrs=train_psnrs,
             val_psnrs=val_psnrs,
             test_psnrs=test_psnrs,
+            iter_count=int(global_iter_count - prev_iter_count)
         ), fid, indent=4)
 
 
@@ -135,9 +142,10 @@ if __name__ == '__main__':
         test_dataset = cycle(get_dataset(path.join(CLEAR_IMAGES_DIR, 'test')).batch(batch_size))
 
         optimizer = tf.keras.optimizers.Adam(learning_rate)
-        sr_net = PixelAttentionSRNetwork(feat_extr_n_filters=30, upsamp_n_filters=20, n_blocks=16, scale=2, input_shape=input_lr_shape)
+        sr_net = PixelAttentionSRNetwork(feat_extr_n_filters=30, upsamp_n_filters=20, n_blocks=16, scale=4, input_shape=input_lr_shape)
         
         checkpoint = tf.train.Checkpoint(
+            global_iter_count=global_iter_count,
             sr_net=sr_net,
             optimizer=optimizer,
         )
