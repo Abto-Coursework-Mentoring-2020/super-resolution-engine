@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from utils import plot_single_image, plot_multiple_images, logger
 from losses import l1_image_loss, multiscale_ssim_loss
 from core.pan import PixelAttentionSRNetwork
-from data import LR_IMAGE_SIZE, HR_IMAGE_SIZE, CLEAR_IMAGES_DIR, get_dataset
+from data import LR_IMAGE_SIZE, HR_IMAGE_SIZE, imageS_DIR, get_dataset
 
 
 batch_size = 24
@@ -50,7 +50,7 @@ logger = logging.getLogger()
 def train_step(lr_batch_images, hr_batch_images):
     with tf.GradientTape() as tape:
         # plot_multiple_images((lr_batch_images.numpy(), lr_batch_images.numpy()), 'lr_images', figsize=(8, 8))
-        # plt.savefig('test.png')
+        # plt.savefig('test')
         # return
         enhanced_images = sr_net(lr_batch_images, training=True)
         loss = alpha * multiscale_ssim_loss(hr_batch_images, enhanced_images) + (1 - alpha) * l1_image_loss(hr_batch_images, enhanced_images)
@@ -78,7 +78,7 @@ def train():
                 print(train_psnr)
                 global_iter_count.assign_add(1)
                 if global_iter_count % print_freq == 0:
-                    fig_file_path_tmpl = './out/visualization/epoch_{i_epoch}_iter_{iter_cnt}_{data_clf}_results.png'
+                    fig_file_path_tmpl = './out/visualization/epoch_{i_epoch}_iter_{iter_cnt}_{data_clf}_results'
                     fig_title_tmpl = 'Epoch {i_epoch}. Iteration {iter_cnt}. {data_clf_label} PSNR: {psnr}'
                     
                     plot_multiple_images((enhanced_imgs, hr_images), fig_title_tmpl.format(i_epoch=i_epoch, iter_cnt=int(global_iter_count), data_clf_label='Train', psnr=train_psnr), figsize=(8, 8))
@@ -137,9 +137,9 @@ def train():
 
 if __name__ == '__main__':
     with tf.device(device):
-        train_dataset = get_dataset(path.join(CLEAR_IMAGES_DIR, 'train')).batch(batch_size)
-        val_dataset = cycle(get_dataset(path.join(CLEAR_IMAGES_DIR, 'val')).batch(batch_size))
-        test_dataset = cycle(get_dataset(path.join(CLEAR_IMAGES_DIR, 'test')).batch(batch_size))
+        train_dataset = get_dataset(path.join(imageS_DIR, 'train')).batch(batch_size)
+        val_dataset = cycle(get_dataset(path.join(imageS_DIR, 'val')).batch(batch_size))
+        test_dataset = cycle(get_dataset(path.join(imageS_DIR, 'test')).batch(batch_size))
 
         optimizer = tf.keras.optimizers.Adam(learning_rate)
         sr_net = PixelAttentionSRNetwork(feat_extr_n_filters=30, upsamp_n_filters=20, n_blocks=16, scale=4, input_shape=input_lr_shape)
