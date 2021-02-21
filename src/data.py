@@ -19,11 +19,16 @@ def read_image(fp, target_size):
     return tf.image.resize(image, target_size, 'bicubic')
     
 
-def prepare_example(hr_image_fp):
+def prepare_example(hr_image_fp, ret_img_name=False):
     """
     Reads high resolution image and makes one training example from it (low and high resolution images pair).
     """ 
-    return read_image(hr_image_fp, LR_IMAGE_SIZE), read_image(hr_image_fp, HR_IMAGE_SIZE)
+    example = read_image(hr_image_fp, LR_IMAGE_SIZE), read_image(hr_image_fp, HR_IMAGE_SIZE)
+    if ret_img_name:
+        img_name = path.split(str(hr_image_fp))[1].split('.')[0]
+        return example + (tf.constant(img_name),)
+    else:    
+        return example
 
 
 def get_dataset(images_dir):
