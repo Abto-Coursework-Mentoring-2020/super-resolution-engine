@@ -1,3 +1,4 @@
+import cv2
 import tensorflow as tf
 from os import path
 
@@ -13,17 +14,14 @@ def read_image(fp, target_size):
     """
     Reads image and resizes it with Bicubic interpolation to the target size.
     """
-    image_string = tf.io.read_file(fp)
-    image_decoded = tf.image.decode_jpeg(image_string, channels=3)
-    image = tf.cast(image_decoded, tf.float32)
-    return tf.image.resize(image, target_size, 'bicubic')
+    return tf.constant(cv2.resize(cv2.imread(fp.numpy().decode('utf-8')), target_size), dtype=tf.float32)
     
 
-def prepare_example(hr_image_fp, ret_img_name=False):
+def prepare_example(hr_image_fp, ret_img_name=False, lr_img_size=(128, 128), hr_img_size=(256, 256)):
     """
     Reads high resolution image and makes one training example from it (low and high resolution images pair).
     """ 
-    example = read_image(hr_image_fp, LR_IMAGE_SIZE), read_image(hr_image_fp, HR_IMAGE_SIZE)
+    example = read_image(hr_image_fp, lr_img_size), read_image(hr_image_fp, hr_img_size)
     if ret_img_name:
         img_name = path.split(str(hr_image_fp))[1].split('.')[0]
         return example + (tf.constant(img_name),)
@@ -32,4 +30,5 @@ def prepare_example(hr_image_fp, ret_img_name=False):
 
 
 def get_dataset(images_dir):
-    return tf.data.Dataset.list_files(path.join(images_dir, '*')).map(prepare_example)
+    return tf.data.Dataset.list_files(path.join(images_dir, '*')).map(lambda fp: tf.py_function(prepare_example, [fp], (tf.float32, tf.float32)))
+
