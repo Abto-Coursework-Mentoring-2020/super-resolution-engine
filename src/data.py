@@ -7,17 +7,17 @@ IMAGES_DIR = './data/img'
 CLEAR_IMAGES_DIR = path.join(IMAGES_DIR, 'clear')
 DEGRADATED_IMAGES_DIR = path.join(IMAGES_DIR, 'degradated')
 ANNOTATION_FILE_PATH = './data/annotation.json'
-LR_IMAGE_SIZE = 128, 128
+LR_IMAGE_SIZE = 64, 64
 HR_IMAGE_SIZE = 256, 256
 
 def read_image(fp, target_size):
     """
     Reads image and resizes it with Bicubic interpolation to the target size.
     """
-    return tf.constant(cv2.resize(cv2.imread(fp.numpy().decode('utf-8')), target_size), dtype=tf.float32)
+    return tf.constant(cv2.resize(cv2.imread(fp.numpy().decode('utf-8')), target_size, interpolation=cv2.INTER_CUBIC), dtype=tf.float32)
     
 
-def prepare_example(hr_image_fp, ret_img_name=False, lr_img_size=(128, 128), hr_img_size=(256, 256)):
+def prepare_example(hr_image_fp, ret_img_name=False, lr_img_size=LR_IMAGE_SIZE, hr_img_size=HR_IMAGE_SIZE):
     """
     Reads high resolution image and makes one training example from it (low and high resolution images pair).
     """ 
