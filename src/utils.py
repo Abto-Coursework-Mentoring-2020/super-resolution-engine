@@ -27,7 +27,6 @@ def plot_multiple_images(batch, title="", cmap=None, figsize=None):
     """
     Plots batch of images from image tensors.
     """
-    batch = tf.cast(tf.clip_by_value(batch, 0, 255), tf.uint8)
     
     X, y = batch
     
@@ -62,9 +61,7 @@ def plot_single_image(image, title="", cmap=None):
       image: 3D image tensor. [height, width, channels].
       title: Title to display in the plot.
     """
-    image = np.asarray(image)
-    image = tf.clip_by_value(image, 0, 255)
-    image = Image.fromarray(tf.cast(image, tf.uint8).numpy())
+    image = Image.fromarray(np.asarray(image).astype(np.uint8))
     plt.imshow(image, cmap=cmap)
     plt.axis("off")
     plt.title(title)

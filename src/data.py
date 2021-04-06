@@ -7,7 +7,7 @@ IMAGES_DIR = './data/img'
 CLEAR_IMAGES_DIR = path.join(IMAGES_DIR, 'clear')
 DEGRADATED_IMAGES_DIR = path.join(IMAGES_DIR, 'degradated')
 ANNOTATION_FILE_PATH = './data/annotation.json'
-LR_IMAGE_SIZE = 64, 64
+LR_IMAGE_SIZE = 128, 128
 HR_IMAGE_SIZE = 256, 256
 
 def read_image(fp, target_size):
